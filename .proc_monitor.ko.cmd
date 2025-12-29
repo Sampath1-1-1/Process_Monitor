@@ -1,0 +1,1 @@
+savedcmd_/home/sampathkumar/Desktop/proc_monitor/proc_monitor.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/sampathkumar/Desktop/proc_monitor/proc_monitor.ko /home/sampathkumar/Desktop/proc_monitor/proc_monitor.o /home/sampathkumar/Desktop/proc_monitor/proc_monitor.mod.o
