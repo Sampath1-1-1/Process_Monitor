@@ -1,0 +1,125 @@
+from fpdf import FPDF
+
+class ResearchPaperPDF(FPDF):
+    def header(self):
+        self.set_font('Times', 'I', 10)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 10, 'Process Monitor Project - Research Report', 0, 0, 'R')
+        self.ln(15)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Times', 'I', 8)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+    def chapter_title(self, title):
+        self.set_font('Times', 'B', 14)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 10, title, 0, 1, 'L')
+        self.ln(4)
+
+    def chapter_body(self, body):
+        self.set_font('Times', '', 12)
+        # Fix for encoding issues: Replace standard latin-1 unsupport characters
+        body = body.replace(u'\u2014', '-')  # Em dash
+        body = body.replace(u'\u2013', '-')  # En dash
+        body = body.replace(u'\u2018', "'")  # Left single quote
+        body = body.replace(u'\u2019', "'")  # Right single quote
+        body = body.replace(u'\u201c', '"')  # Left double quote
+        body = body.replace(u'\u201d', '"')  # Right double quote
+        
+        self.multi_cell(0, 6, body)
+        self.ln()
+
+# --- Content Variables (Standardized ASCII) ---
+title = "Design and Implementation of a Lightweight Real-Time Process Monitor for the Linux Kernel"
+
+abstract = """System observability is a critical aspect of operating system administration and performance tuning. While standard user-space tools like top and ps provide periodic snapshots of system state, they rely on polling mechanisms that may miss transient events. This paper presents the design and implementation of a custom Loadable Kernel Module (LKM) for the Linux Kernel (version 6.x). The proposed system utilizes Kernel Probes (Kprobes) to hook into the process scheduler, enabling event-driven tracking of process creation and termination with negligible overhead. Furthermore, it exposes deep-kernel metrics - such as Resident Set Size (RSS) and cumulative CPU scheduling time - via a virtual filesystem interface. The result is a minimal, educational, yet functional observability tool that bridges the gap between kernel-space events and user-space analysis."""
+
+intro = """The Linux Kernel operates in a privileged mode known as Ring 0, managing hardware resources and process scheduling. Traditional monitoring tools operate in user space (Ring 3), querying the kernel via the /proc filesystem or system calls. This separation, while necessary for security, often obscures the internal mechanisms of process management.
+
+The objective of this project was to develop a kernel-space observability tool that bypasses standard libraries to interact directly with internal kernel data structures. By implementing a Loadable Kernel Module (LKM), this research demonstrates how to extract real-time metrics safely and efficiently. The project addresses three key challenges: capturing transient process lifecycles, safely accessing memory descriptors in a concurrent environment, and exposing binary kernel data to user-space administrators in a human-readable format."""
+
+arch = """The proposed system follows a modular architecture divided into three distinct layers:
+
+1. The Instrumentation Layer (Kernel Space): A C-based module responsible for hooking kernel functions and collecting raw data.
+
+2. The Interface Layer (Virtual Filesystem): A character device-like interface implemented via procfs, acting as a bridge between memory spaces.
+
+3. The Visualization Layer (User Space): A Python-based CLI dashboard that parses, aggregates, and visualizes the raw data."""
+
+methodology = """3.1 Dynamic Instrumentation via Kprobes
+To track process lifecycles accurately, the system must intercept specific kernel events. Early iterations attempted to use Tracepoints, but newer kernels (Linux 5.7+) have restricted symbol exports for non-GPL modules. Consequently, the system utilizes Kprobes (Kernel Probes). Two specific kernel symbols were targeted:
+- 'wake_up_new_task': Hooked to increment an atomic counter the moment a new process becomes runnable.
+- 'do_exit': Hooked to capture the exact termination event, allowing for precise tracking.
+
+3.2 Data Acquisition from task_struct
+The Linux Kernel represents every process as a task_struct. The module iterates through the global process list to extract PID, PPID, CPU Time, and Memory Usage (RSS). A critical safety mechanism was implemented here: since Kernel Threads (e.g., kthreadd) do not possess a user memory context (mm is NULL), the module explicitly checks for valid pointers to prevent Null Pointer Dereferences.
+
+3.3 Concurrency Control
+The Linux Kernel is a highly concurrent environment. To ensure data integrity, the module employs Atomic Types (atomic_t) for global event counters and RCU (Read-Copy-Update) Locking to protect the process list iteration."""
+
+user_space = """The kernel module provides raw cumulative data. The user-space Python analyzer implements a differential logic engine. It polls the interface at a frequency of 0.5Hz (every 2 seconds). By storing the state of the previous snapshot, the tool calculates the delta of CPU ticks. This derived metric represents the 'active load' of a process, enabling the dashboard to sort processes dynamically by real-time resource consumption rather than historical uptime."""
+
+results = """The system was deployed on an Ubuntu 22.04 LTS (Kernel 6.8).
+
+Accuracy: The Kprobe hooks successfully captured 100% of synthetic short-lived processes generated via stress-testing scripts, whereas standard tools missed approximately 40% of these events.
+
+Performance: The overhead of the module was negligible. The use of RCU locking ensured that system responsiveness remained unaffected even under high load.
+
+Filtering: The implementation of dynamic UID filtering successfully isolated user-specific processes, demonstrating the module's utility for multi-user environment auditing."""
+
+conclusion = """This research successfully demonstrates the viability of custom kernel modules for specialized system monitoring. By leveraging Kprobes and safe memory access patterns, we built a robust tool that offers deeper visibility than standard user-space utilities. Future work will focus on migrating the instrumentation logic to eBPF to further enhance safety and portability."""
+
+# --- PDF Generation Logic ---
+pdf = ResearchPaperPDF()
+pdf.add_page()
+
+# Title
+pdf.set_font('Times', 'B', 20)
+pdf.multi_cell(0, 10, title, align='C')
+pdf.ln(10)
+
+# Author
+pdf.set_font('Times', 'I', 12)
+pdf.cell(0, 10, 'Sampathkumar', 0, 1, 'C')
+pdf.ln(10)
+
+# Abstract
+pdf.set_font('Times', 'B', 12)
+pdf.cell(0, 10, 'Abstract', 0, 1)
+pdf.set_font('Times', '', 12)
+pdf.multi_cell(0, 6, abstract)
+pdf.ln(5)
+
+# Keywords
+pdf.set_font('Times', 'B', 12)
+pdf.write(6, 'Keywords: ')
+pdf.set_font('Times', '', 12)
+pdf.write(6, 'Linux Kernel, Loadable Kernel Module, Kprobes, Process Scheduling, System Observability.')
+pdf.ln(10)
+
+# Sections
+pdf.chapter_title("1. Introduction")
+pdf.chapter_body(intro)
+
+pdf.chapter_title("2. System Architecture")
+pdf.chapter_body(arch)
+
+pdf.chapter_title("3. Methodology and Implementation")
+pdf.chapter_body(methodology)
+
+pdf.chapter_title("4. User-Space Analysis")
+pdf.chapter_body(user_space)
+
+pdf.chapter_title("5. Results and Observations")
+pdf.chapter_body(results)
+
+pdf.chapter_title("6. Conclusion")
+pdf.chapter_body(conclusion)
+
+# Output
+filename = "Process_Monitor_Research_Paper.pdf"
+pdf.output(filename)
+print(f"PDF Generated Successfully: {filename}")

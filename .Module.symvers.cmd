@@ -1,1 +1,0 @@
-savedcmd_/home/sampathkumar/Desktop/proc_monitor/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/sampathkumar/Desktop/proc_monitor/Module.symvers -T /home/sampathkumar/Desktop/proc_monitor/modules.order -i Module.symvers -e 
